@@ -21,7 +21,7 @@ public class ViewClient {
     private Scanner sc;
     private Client client;
     private Comanda comanda;
-
+    private ViewOperator viewOp;
     public ViewClient() {
         clientRepo = new ClientRepository();
         comandaRepo = new ComandaRepository();
@@ -33,6 +33,7 @@ public class ViewClient {
 
 
     public void goClient() {
+        System.out.println("sunt in goclient");
         boolean quit = false;
         while (!quit) {
             meniu1();
@@ -42,7 +43,8 @@ public class ViewClient {
                     login();
                     break;
                 case 2:
-
+                    creareClient();
+                    break;
                 case 0:
                     quit = true;
                     break;
@@ -78,19 +80,8 @@ public class ViewClient {
     }
 
     public void goGest() {
-        boolean quit = false;
-        while (!quit) {
-            meniuGest();
-            int opt = Integer.parseInt(sc.nextLine());
-            switch (opt) {
-                case 1:
-                    changeColet();
-                    break;
-                case 0:
-                    quit = true;
-                    break;
-            }
-        }
+            viewOp=new ViewOperator(client);
+
     }
 
     public void meniu1() {
@@ -128,41 +119,115 @@ public class ViewClient {
             } else {
                 goGest();
             }
+        }else{
+            System.out.println("voi lansa goclient");
+            goClient();
+        }
+    }
+
+    public  void creareClient(){
+        System.out.print("Dati numele Dvs: ");
+        String nume=sc.nextLine();
+        System.out.print("Dati Localitatea de Domiciliu: ");
+        String loca=sc.nextLine();
+        System.out.print("Dati Adresa: ");
+        String adr=sc.nextLine();
+        System.out.print("Dati email-ul: ");
+        String email=sc.nextLine();
+        System.out.print("Dati Telefonul: ");
+        String tel=sc.nextLine();
+        System.out.print("Alegeti o parola: ");
+        String pass=sc.nextLine();
+
+        if(!clientRepo.isClient(nume,email)){
+            Client cl=new Client();
+            cl.setNume(nume);
+            cl.setLocalitate(loca);
+            cl.setAdresa(adr);
+            cl.setEmail(email);
+            cl.setCategorie(0);
+            cl.setTelefon(tel);
+            cl.setParola(pass);
+            clientRepo.addClient(cl);
+            int idc=clientRepo.retId(cl);
+            if(idc>0){
+
+                System.out.println("Notati datele dvs :");
+                clientRepo.afisareClient( clientRepo.toClient(idc));
+
+            }else{
+                System.out.println("Client existent sau nu am reusit adaugarea cleintului");
+            }
+
+        }else{
+            System.out.println("Client existent in baza de date!!");
         }
     }
 
     public void addColet() {
-        if (comandaRepo.getComandaActiva(client.getId()) != null) {
-            System.out.println("Nu am o comanda activa");
+        comanda=comandaRepo.getComandaActiva(client.getId());
+        if (comanda.getId() == 0) {
             comandaRepo.add(new Comanda(client.getId()));
-            comanda = comandaRepo.getComandaActiva(client.getId());
-        } else {
-            System.out.println("flag  kkk");
             comanda = comandaRepo.getComandaActiva(client.getId());
         }
         System.out.println("Comanda id="+comanda.getId());
-        System.out.print("Indicati destinatia: ");
+
+        System.out.print("Indicati Destinatarul: ");
+        String destinatar = sc.nextLine();
+
+        System.out.print("Indicati Localitatea: ");
+        String localitate = sc.nextLine();
+
+        System.out.print("Indicati adresa: ");
         String adresa = sc.nextLine();
+
+        System.out.print("Greutatea:  ");
+        int greutate = Integer.parseInt(sc.nextLine());
+
+        System.out.print("Distanta: ");
+        int distanta = Integer.parseInt(sc.nextLine());
+
+        System.out.print("Plata Ramburs 0/1: ");
+        int ramburs = Integer.parseInt(sc.nextLine());
+        boolean bramb=false;
+        if(ramburs>0){
+            bramb=true;
+        }
+
         Colet c = new Colet(comanda.getId(), adresa);
+        c.setLocalitate_destinatie(localitate);
+        c.setDestinatar(destinatar);
+        c.setDistanta(distanta);
+        c.setGreutate(greutate);
+        c.setPlata_ramburs(bramb);
+
+        System.out.println(coletRepo.getpret(c,LocalDateTime.now()));
+        c.setPret(coletRepo.getpret(c,LocalDateTime.now()));
         String awb = c.getAwb();
         coletRepo.add(c);
-        comanda.setNr_colete(comanda.getNr_colete() + 1);
+        int totcolete=comanda.getNr_colete();
+        int prevcost=comanda.getPret_total();
+        comanda.setNr_colete(totcolete+1);
+        comanda.setPret_total(prevcost+c.getPret());
         c = coletRepo.getColet(awb);
-        Track t = new Track(c.getId_comanda(), c.getAwb());
+        Track t = new Track(c.getId_colet(), c.getAwb());
+        t.setStatus("initiat");
         trackRepo.add(t);
-        comanda.setNr_colete(comanda.getNr_colete()+1);
-        System.out.println("Sunt la upd comanda");
         comandaRepo.updComanda(comanda);
-        System.out.println("Gataaaaaaaaaaaaaaaaaaaaa");
     }
 
     public void showComenzi() {
         List<Comanda> listaComenzi = new ArrayList<>();
         List<Colet> listaColete = new ArrayList<>();
         List<Track> listaTrack = new ArrayList<>();
+
         listaComenzi = comandaRepo.getComenziClient(client.getId());
         for (Comanda c : listaComenzi) {
             comandaRepo.printComanda(c);
+            listaColete=coletRepo.getColete(c.getId());
+            for(Colet cl:listaColete){
+                System.out.println(cl.toString());
+            }
         }
     }
 
@@ -170,6 +235,7 @@ public class ViewClient {
         System.out.print("Dati ID-ul comenzii de sters :");
         int idC = Integer.parseInt(sc.nextLine());
         if (comandaRepo.getComandaActiva(client.getId()).getId() == idC) {
+            System.out.println("da este comanda activa cu nr="+idC);
             comandaRepo.del(comandaRepo.getComanda(idC));
         } else {
             System.out.println("Comanda nu exista sau este deja in procesare/livrare");
@@ -182,8 +248,9 @@ public class ViewClient {
         Colet c = new Colet(awbC);
         String lastStatus = coletRepo.getLastStatus(c);
         if (lastStatus.length()==0) {
-            coletRepo.del(new Colet(awbC));
+            coletRepo.del(c);
             comanda.setNr_colete(comanda.getNr_colete() -1);
+            comanda.setPret_total(comanda.getPret_total()-c.getPret());
             if(comanda.getNr_colete()==0){
                 comandaRepo.del(comanda);
             }else{

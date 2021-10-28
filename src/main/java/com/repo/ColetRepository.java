@@ -1,8 +1,6 @@
 package com.repo;
 
-import com.model.Colet;
-import com.model.StatusColet;
-import com.model.Track;
+import com.model.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -21,7 +19,8 @@ public class ColetRepository {
     private Connection connection;
     private Statement statement;
     private DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
+    private Colet colet;
+    private Tarif tarif;
     public ColetRepository() {
         try {
             connection = DriverManager.getConnection(jdbcURL, userName, password);
@@ -31,10 +30,14 @@ public class ColetRepository {
         }
     }
 
+    public ColetRepository(Colet c){
+        colet=c;
+    }
+
     private void executeStatement(String s) {
-        try{
+        try {
             statement.execute(s);
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -42,26 +45,26 @@ public class ColetRepository {
     public void add(Colet c) {
         if (!isColet(c)) {
             String sqlStr = String.format("insert into colete (awb,id_comanda,greutate,distanta," +
-                            "localitate_destinatie,adresa_destinatie,status) values('%s',%d,%d,%d,'%s','%s','%s')",
-                    c.getAwb(), c.getId_comanda(), c.getGreutate(), c.getDistanta(), c.getLocalitate_destinatie(), c.getAdresa_destinatie(),
-                    c.getStatus());
-            System.out.println(sqlStr);
+                            "destinatar,localitate_destinatie,adresa_destinatie,pret,plata_ramburs) values('%s',%d,%d,%d,'%s','%s','%s',%d,%b)",
+                    c.getAwb(), c.getId_comanda(), c.getGreutate(), c.getDistanta(),c.getDestinatar(), c.getLocalitate_destinatie(), c.getAdresa_destinatie(),
+                    c.getPret(),c.isPlata_ramburs());
             executeStatement(sqlStr);
         }
     }
 
-    public void del(Colet c){
-        System.out.println("Sunt la stergerea coletului "+c.getAwb());
-        String sqlStr=String.format("delete from status where awb_colet='%s'",c.getAwb());
+    public void del(Colet c) {
+        System.out.println("Sunt la stergerea coletului " + c.getAwb());
+        String sqlStr = String.format("delete from status where awb_colet='%s'", c.getAwb());
         executeStatement(sqlStr);
-        sqlStr=String.format("delete from colete where awb='%s'",c.getAwb());
+        sqlStr = String.format("delete from colete where awb='%s'", c.getAwb());
         executeStatement(sqlStr);
     }
 
-    public void upd(Colet c){
-        String sqlStr=String.format("update colete set greutate=%d,distanta=%d,localitate_destinatie='%s'," +
-                "adresa_destinatie='%s',status='%s' where id_colet=%d",c.getGreutate(),c.getDistanta(),
-                c.getLocalitate_destinatie(),c.getAdresa_destinatie(),c.getStatus());
+    public void upd(Colet c) {
+
+        String sqlStr = String.format("update colete set greutate=%d,distanta=%d,localitate_destinatie='%s'," +
+                        "adresa_destinatie='%s',pret=%d,plata_ramburs=%b where id_colet=%d", c.getGreutate(), c.getDistanta(),
+                c.getLocalitate_destinatie(), c.getAdresa_destinatie(), c.getPret(),c.isPlata_ramburs());
         executeStatement(sqlStr);
     }
 
@@ -79,17 +82,17 @@ public class ColetRepository {
         return false;
     }
 
-    public int makePret(Colet c){
-        String datacolet=getDataColet(c);
-        if(datacolet!=null){
-            String sqlStr=String.format("select pret from tarif where data1<='%s' and data2>='%s'",datacolet,datacolet);
+    public int makePret(Colet c) {
+        String datacolet = getDataColet(c);
+        if (datacolet != null) {
+            String sqlStr = String.format("select pret from tarif where data1<='%s' and data2>='%s'", datacolet, datacolet);
             executeStatement(sqlStr);
-            try{
-                ResultSet rs=statement.getResultSet();
-                if(rs.next()){
-                    return Integer.parseInt(rs.getString(1))*c.getGreutate()*c.getDistanta();
+            try {
+                ResultSet rs = statement.getResultSet();
+                if (rs.next()) {
+                    return Integer.parseInt(rs.getString(1)) * c.getGreutate() * c.getDistanta();
                 }
-            }catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -97,18 +100,17 @@ public class ColetRepository {
     }
 
     public Colet getColet(String awb) {
-        String sqlStr = String.format("select * from colete where awb='%s'",awb);
+        String sqlStr = String.format("select * from colete where awb='%s'", awb);
         Colet ret = null;
         executeStatement(sqlStr);
         try {
-
-            ResultSet rs=statement.getResultSet();
-            if(rs.next()){
-                ret=new Colet(Integer.parseInt(rs.getString(1)),
-                        rs.getString(2),Integer.parseInt(rs.getString(3)),
-                        Integer.parseInt(rs.getString(4)),Integer.parseInt(rs.getString(5)),
-                        rs.getString(6),rs.getString(7),
-                        rs.getString(8));
+            ResultSet rs = statement.getResultSet();
+            if (rs.next()) {
+                ret = new Colet(Integer.parseInt(rs.getString(1)),
+                        rs.getString(2), Integer.parseInt(rs.getString(3)),
+                        Integer.parseInt(rs.getString(4)), Integer.parseInt(rs.getString(5)),
+                        rs.getString(6), rs.getString(7),
+                        rs.getString(8),Integer.parseInt(rs.getString(9)),Boolean.valueOf(rs.getString(10)));
             }
         } catch (Exception e) {
             System.out.println("Nu am gasit AWB");
@@ -116,65 +118,128 @@ public class ColetRepository {
         return ret;
     }
 
-    public List<Colet> getColete(int idCom){
-        List<Colet> lista=new ArrayList<>();
-        List<String> listawb=new ArrayList<>();
-        String sqlStr=String.format("select * from colete where id_comanda=%d",idCom);
-        try{
+    public List<Colet> getColete(int idCom) {
+        List<Colet> lista = new ArrayList<>();
+        List<String> listawb = new ArrayList<>();
+        Colet colet = null;
+        String sqlStr = String.format("select * from colete where id_comanda=%d", idCom);
+        try {
             executeStatement(sqlStr);
-            ResultSet rs=statement.getResultSet();
-            while(rs.next()){
+            ResultSet rs = statement.getResultSet();
+            while (rs.next()) {
                 listawb.add(rs.getString(2));
             }
-            for(String s:listawb){
-
+            for(String aw:listawb){
+                lista.add(getColet(aw));
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return lista;
     }
 
-    public String getDataColet(Colet c){
-        String sqlStr=String.format("select data_comanda from comenzi where id=%d",c.getId_colet());
+    public List<Colet> getColeteLocal(String loca) {
+        List<Colet> lista = new ArrayList<>();
+        List<String> listawb = new ArrayList<>();
+        Colet clt=new Colet();
+        String sqlStr=String.format("select * from colete where id_comanda in(select id from comenzi " +
+                "where id_client in(select id from clienti where clienti.localitate='%s')) " +
+                "and awb in(select awb from status where status='%s')",loca,"initiat");
+        try {
+            executeStatement(sqlStr);
+            ResultSet rs = statement.getResultSet();
+            while (rs.next()) {
+                listawb.add(rs.getString(2));
+            }
+            for(String aw:listawb){
+                clt=getColet(aw);
+                System.out.println(clt.getId_colet());
+                if(getLastStatus(clt).equals("initiat")){
+                    lista.add(clt);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return lista;
+    }
+
+    public String getDataColet(Colet c) {
+        String sqlStr = String.format("select data_comanda from comenzi where id=%d", c.getId_colet());
         executeStatement(sqlStr);
-        try{
-            ResultSet rs=statement.getResultSet();
-            if(rs.next()){
+        try {
+            ResultSet rs = statement.getResultSet();
+            if (rs.next()) {
                 return rs.getString(1);
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    public List<Track> getStatus(Colet c){
-        List<Track> ls=new ArrayList<>();
-        String sqlStr=String.format("select * from status where awb_colet='%s'",c.getAwb());
+    public List<Track> getStatus(Colet c) {
+        List<Track> ls = new ArrayList<>();
+        String sqlStr = String.format("select * from status where awb_colet='%s'", c.getAwb());
         executeStatement(sqlStr);
         Track t;
-        try{
-            ResultSet rs=statement.getResultSet();
-            while(rs.next()){
-               t= new Track(Integer.parseInt(rs.getString(1)),
-                       rs.getString(2),LocalDateTime.parse(rs.getString(3),dtf),
-                       rs.getString(4),rs.getString(5));
+        try {
+            ResultSet rs = statement.getResultSet();
+            while (rs.next()) {
+                t = new Track(Integer.parseInt(rs.getString(1)),
+                        rs.getString(2), LocalDateTime.parse(rs.getString(3), dtf),
+                        rs.getString(4), rs.getString(5));
                 ls.add(t);
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return ls;
     }
 
-    public String getLastStatus(Colet c){
-        List<Track> ls=getStatus(c);
-        if(ls.size()>0){
-            return ls.get(ls.size()-1).getStatus();
+    public String getLastStatus(Colet c) {
+        List<Track> ls = getStatus(c);
+        if (ls.size() > 0) {
+            return ls.get(ls.size() - 1).getStatus();
         }
         return null;
     }
+
+    public int getpret(Colet c,LocalDateTime data){
+        String s=data.toString();
+        double pretmin=0,pretcalc=0;
+        int dmax=0,gmax=0;
+        String sqlStr=String.format("select * from tarif where data1<='%s'<=data2",s);
+        executeStatement(sqlStr);
+        try{
+            ResultSet rs=statement.getResultSet();
+            if(rs.next()){
+                pretmin=Double.parseDouble(rs.getString(3));
+                pretcalc=Double.parseDouble(rs.getString(4));
+                gmax=Integer.parseInt(rs.getString(5));
+                dmax=Integer.parseInt(rs.getString(6));
+            }
+        }catch (Exception e){
+            System.out.println("Nu a mers extragerea datelor despre tarif");
+            e.printStackTrace();
+        }
+        if(pretmin>0){
+            int sw=0;
+            if(c.getDistanta()>dmax&&c.getGreutate()>gmax){
+                return (int)(pretmin+((c.getGreutate()-gmax)*(c.getDistanta()-dmax)*pretcalc/20));
+            }else{
+                if(c.getGreutate()>gmax){
+                    return (int)((c.getGreutate()-gmax)*c.getDistanta()*(pretcalc/60));
+                }else if(c.getDistanta()>dmax){
+                    return (int)(pretmin+(c.getGreutate()*(c.getDistanta()-dmax)*(pretcalc/50)));
+
+                }else{
+                    return (int)pretmin;
+                }
+            }
+        }
+        return 0;
+    }
 }
-    // public List<Track>
+// public List<Track>
 

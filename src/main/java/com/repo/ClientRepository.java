@@ -31,11 +31,15 @@ public class ClientRepository {
     }
 
     public void addClient(Client c) {
-        if (!isClient(c.getNume(), c.getAdresa())) {
 
-            String sqlStr = String.format("insert into clienti (nume,adresa,telefon,email,parola,categorie) " +
-                    "values('%s','%s','%s','%s','%d',0)",c.getNume(),c.getAdresa(),c.getTelefon(),
-                    c.getEmail(),c.getParola());
+        if (!isClient(c.getNume(), c.getEmail())) {
+            System.out.println("____________________Sunt la adaugare Cleint");
+            String sqlStr = String.format("insert into clienti (nume,localitate,adresa,telefon,email,parola,categorie) " +
+                    "values('%s','%s','%s','%s','%s','%s',%d)",
+                    c.getNume(),c.getLocalitate(),c.getAdresa(),c.getTelefon(),
+                    c.getEmail(),c.getParola(),0
+                    );
+
             executeStatement(sqlStr);
         } else {
             System.out.println("Clientul exista in BD");
@@ -49,16 +53,20 @@ public class ClientRepository {
 
     public void updClientNume(Client c,String newnume){
         String sqlStr=String.format("update clienti set nume='%s' where id=%d",newnume,c.getId());
-        if(!isClient(newnume,c.getAdresa())){
+        if(!isClient(newnume,c.getEmail())){
             executeStatement(sqlStr);
         }else{
             System.out.println("Clientul exista deja in BD");
         }
     }
 
-    public void updClientAdrTelEmail(Client c,String newAdr,String newTel,String newEmail){
+    public void updClientAdrTelEmail(Client c,String newLocalitate,String newAdr,String newTel,String newEmail){
         String sqlStr="update clienti ";
         String prfx="";
+        if(newLocalitate.length()>0){
+            sqlStr+=prfx+String.format("set localitate=newLocalitate");
+            prfx=",";
+        }
         if(newAdr.length()>0){
             sqlStr+=prfx+String.format("set adresa=newAdr");
             prfx=",";
@@ -120,8 +128,9 @@ public class ClientRepository {
             ResultSet rs=statement.getResultSet();
             if(rs.next()){
                 retC=new Client(Integer.parseInt(rs.getString(1)),
-                        rs.getString(2),rs.getString(3),rs.getString(4),
-                        rs.getString(5),rs.getString(6),Integer.parseInt(rs.getString(7)));
+                        rs.getString(2),
+                        rs.getString(3),rs.getString(4),rs.getString(5),
+                        rs.getString(6),Integer.parseInt(rs.getString(7)),rs.getString(8));
             }else{
                 System.out.println("Clientul nu exista");
             }
@@ -131,8 +140,8 @@ public class ClientRepository {
         return retC;
     }
 
-    public boolean isClient(String n, String ad) {
-        String sqlStr = String.format("select count(*) from clienti where nume='%s' and adresa='%s'", n, ad);
+    public boolean isClient(String n, String em) {
+        String sqlStr = String.format("select count(*) from clienti where nume='%s' and email='%s'", n, em);
         executeStatement(sqlStr);
         int rez = 0;
         try {
@@ -179,7 +188,7 @@ public class ClientRepository {
 
     public int retId(Client c){
         int ret=-1;
-        String sqlStr=String.format("select id from clienti where nume='%s' and adresa='%s'",c.getNume(),c.getAdresa());
+        String sqlStr=String.format("select id from clienti where nume='%s' and email='%s'",c.getNume(),c.getEmail());
         executeStatement(sqlStr);
         try{
             ResultSet rs=statement.getResultSet();
@@ -192,5 +201,13 @@ public class ClientRepository {
         return ret;
     }
 
+    public void afisareClient(Client c){
+        System.out.println("Detalii Client:");
+        System.out.println("ID: "+c.getId());
+        System.out.println("Nume: "+c.getNume());
+        System.out.println("Adresa: Loc. "+c.getLocalitate()+", "+c.getAdresa());
+        System.out.println("Email: "+c.getEmail()+". Tel. "+c.getTelefon());
+        System.out.println("Parola: "+c.getParola());
+    }
 
 }

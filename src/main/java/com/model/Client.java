@@ -11,25 +11,27 @@ import lombok.*;
 public class Client implements Comparable<Client> {
     private int id;
     private String nume;
+    private String localitate;
     private String adresa;
-    private String telefon;
     private String email;
     private String parola;
     private int categorie;
+    private String telefon;
 
-    public Client(String nume,String adresa){
+    public Client(String nume,String email){
         this.nume=nume;
-        this.adresa=adresa;
+        this.email=email;
     }
 
     @Override
     public boolean equals(Object o){
         Client c=(Client) o;
-        return nume.equals(c.getNume())&&adresa.equals(c.getAdresa());
+        return email.equals(c.getEmail());
     }
 
     @Override
     public int compareTo(Client o) {
         return nume.compareTo(o.getNume());
     }
+
 }

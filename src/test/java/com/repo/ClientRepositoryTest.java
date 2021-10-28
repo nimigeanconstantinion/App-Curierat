@@ -39,7 +39,7 @@ public void testisClient(){
     @Test
     void isClient() {
         ClientRepository clientRepository=new ClientRepository();
-        assertEquals(true,clientRepository.isClient("Nimigean Ion","Suceava"));
+        assertEquals(true,clientRepository.isClient("Nimigean Ion","constantin@yahoo.com"));
     }
 
     @Test

@@ -72,12 +72,13 @@ public class ViewHome {
         while(go){
             meniu();
             int opt=Integer.parseInt(sc.nextLine());
+            System.out.println("opt este "+opt);
             switch (opt){
                 case 1:
                     awbTrack();
                     break;
                 case 2:
-                    vwc.login();
+                    vwc.goClient();
                     break;
                 case 0:
                     go=false;
